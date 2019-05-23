@@ -10,6 +10,8 @@ program semi_implicit
   real(dp), parameter :: e    = 1.602176634e-19_dp  ! elementary charge
   real(dp), parameter :: eps0 = 8.8541878176e-12_dp ! permittivity of vacuum
 
+  character(len=200)  :: output_name = "output/result"
+
   integer, parameter  :: nx        = 300      ! number of grid points
   real(dp), parameter :: L         = 10e-3_dp ! domain length
   real(dp), parameter :: dx        = L / nx   ! grid spacing
@@ -264,7 +266,7 @@ contains
     character(len=200)  :: fname
     integer             :: n, my_unit
 
-    write(fname, "(A,I0.6,A)") "output_", ix, ".txt"
+    write(fname, "(A,I0.6,A)") trim(output_name) // "_", ix, ".txt"
     open(newunit=my_unit, file=trim(fname))
 
     write(my_unit, "(A)") "x field electron pos_ion potential"
