@@ -3,41 +3,65 @@
 !
 ! Author: Jannis Teunissen
 program semi_implicit
+  use m_config
+
   implicit none
 
   integer, parameter :: dp = kind(0.0d0)
 
-  real(dp), parameter :: e    = 1.602176634e-19_dp  ! elementary charge
-  real(dp), parameter :: eps0 = 8.8541878176e-12_dp ! permittivity of vacuum
+  real(dp), parameter :: elem_charge = 1.602176634e-19_dp  ! elementary charge
+  real(dp), parameter :: eps0        = 8.8541878176e-12_dp ! permittivity of vacuum
 
   character(len=200)  :: output_name = "output/result"
 
-  integer, parameter  :: nx        = 300      ! number of grid points
-  real(dp), parameter :: L         = 10e-3_dp ! domain length
-  real(dp), parameter :: dx        = L / nx   ! grid spacing
-  real(dp), parameter :: t_end     = 30e-9_dp ! end time
-  real(dp), parameter :: dt_output = 1e-9_dp  ! output time step
-  real(dp), parameter :: mu        = 0.03_dp  ! electron mobility (m^2/Vs)
-  real(dp), parameter :: D         = 0.1_dp   ! electron diffusion constant (m^2/s)
-  real(dp), parameter :: E0        = 1e6_dp   ! applied electric field
-  real(dp), parameter :: n0        = 1e20_dp  ! initial density
+  integer  :: nx        = 300      ! number of grid points
+  real(dp) :: L         = 10e-3_dp ! domain length
+  real(dp) :: t_end     = 30e-9_dp ! end time
+  real(dp) :: dt_output = 1e-9_dp  ! output time step
+  real(dp) :: mu        = 0.03_dp  ! electron mobility (m^2/Vs)
+  real(dp) :: D         = 0.1_dp   ! electron diffusion constant (m^2/s)
+  real(dp) :: E0        = 1e6_dp   ! applied electric field
+  real(dp) :: n0        = 1e20_dp  ! initial density
 
+  real(dp) :: dx             ! grid spacing
   real(dp) :: dt             ! current time step
   real(dp) :: dt_max         ! maximum time step
-  real(dp) :: x(-1:nx+2)     ! cell-centered coordinate
-  real(dp) :: n_e(-1:nx+2)   ! cell-centered electron density
-  real(dp) :: n_i(-1:nx+2)   ! cell-centered ion density
-  real(dp) :: field_fc(nx+1) ! face-centered electric field
-  real(dp) :: field_cc(nx)   ! cell-centered electric field
-  real(dp) :: phi(nx)        ! cell-centered electric potential
   real(dp) :: time           ! simulation time
   real(dp) :: dt_cfl, dt_diff, dt_tau
   integer  :: n, n_output
   logical  :: output_this_step
 
+  real(dp), allocatable :: x(:)        ! cell-centered coordinate
+  real(dp), allocatable :: n_e(:)      ! cell-centered electron density
+  real(dp), allocatable :: n_i(:)      ! cell-centered ion density
+  real(dp), allocatable :: field_fc(:) ! face-centered electric field
+  real(dp), allocatable :: field_cc(:) ! cell-centered electric field
+  real(dp), allocatable :: phi(:)      ! cell-centered electric potential
+
+  type(CFG_t) :: cfg
+
+  call CFG_update_from_arguments(cfg)
+  call CFG_add_get(cfg, "output_name", output_name, "Output name")
+  call CFG_add_get(cfg, "nx", nx, "Number of grid points")
+  call CFG_add_get(cfg, "L", L, "Domain length")
+  call CFG_add_get(cfg, "t", t_end, "End time")
+  call CFG_add_get(cfg, "dt", dt_output, "Output time step")
+  call CFG_add_get(cfg, "mu", mu, "Electron mobility (m^2/Vs)")
+  call CFG_add_get(cfg, "D", D, "Electron diffusion constant (m^2/s)")
+  call CFG_add_get(cfg, "E0", E0, "Applied electric field")
+  call CFG_add_get(cfg, "n0", n0, "Initial density")
+
+  allocate(x(-1:nx+2))
+  allocate(n_e(-1:nx+2))
+  allocate(n_i(-1:nx+2))
+  allocate(field_fc(nx+1))
+  allocate(field_cc(nx))
+  allocate(phi(nx))
+
+  dx      = L / nx
   dt_cfl  = 0.5_dp * dx / max(abs(mu * E0), 1e-10_dp)
   dt_diff = 0.5_dp * dx**2 / max(D, 1e-10_dp)
-  dt_tau  = eps0 / (e * mu * n0)
+  dt_tau  = eps0 / (elem_charge * mu * n0)
   dt_max  = 1/(1/dt_cfl + 1/dt_diff)
 
   print *, "L:         ", L
@@ -106,7 +130,7 @@ contains
        ! Determine n_e at cell faces
        n_face(n) = 0.5_dp * (n_e(n-1) + n_e(n))
        ! Set effective epsilon for Poisson equation
-       coeff(n) = -eps0 / e - dt * mu * n_face(n)
+       coeff(n) = -eps0 / elem_charge - dt * mu * n_face(n)
     end do
 
     ! Set matrix diagonals
@@ -282,4 +306,4 @@ contains
     print *, "Written ", trim(fname)
   end subroutine write_output
 
-end program
+end program semi_implicit
