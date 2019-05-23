@@ -44,7 +44,7 @@ program semi_implicit
   call CFG_add_get(cfg, "output_name", output_name, "Output name")
   call CFG_add_get(cfg, "nx", nx, "Number of grid points")
   call CFG_add_get(cfg, "L", L, "Domain length")
-  call CFG_add_get(cfg, "t", t_end, "End time")
+  call CFG_add_get(cfg, "t_end", t_end, "End time")
   call CFG_add_get(cfg, "dt_output", dt_output, "Output time step")
   call CFG_add_get(cfg, "dt_max", dt_max, "Maximal time step (automatic if < 0)")
   call CFG_add_get(cfg, "mu", mu, "Electron mobility (m^2/Vs)")
@@ -83,6 +83,9 @@ program semi_implicit
   print *, "dt_max:    ", dt_max
   print *, "dt_tau     ", dt_tau
 
+  print *, "Estimated drift fraction (in domain)"
+  print *, "|mu*E0|*t_end/L: ", abs(mu*E0)*t_end/L
+
   ! Determine cell-centered coordinates
   do n = -1, nx+2
      x(n) = (n - 0.5_dp) * dx
@@ -118,7 +121,7 @@ program semi_implicit
      time = time + dt
 
      if (output_this_step) then
-        call write_output(n_output)
+        call write_output(n_output, time)
      end if
   end do
 
@@ -293,10 +296,11 @@ contains
     end if
   end function koren_mlim
 
-  subroutine write_output(ix)
-    integer, intent(in) :: ix
-    character(len=200)  :: fname
-    integer             :: n, my_unit
+  subroutine write_output(ix, time)
+    integer, intent(in)  :: ix
+    real(dp), intent(in) :: time
+    character(len=200)   :: fname
+    integer              :: n, my_unit
 
     write(fname, "(A,I0.6,A)") trim(output_name) // "_", ix, ".txt"
     open(newunit=my_unit, file=trim(fname))
@@ -311,7 +315,7 @@ contains
     end do
     close(my_unit)
 
-    print *, "Written ", trim(fname)
+    print *, "Written ", trim(fname), " at t = ", time
   end subroutine write_output
 
 end program semi_implicit
