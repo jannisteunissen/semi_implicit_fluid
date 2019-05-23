@@ -1,3 +1,7 @@
+! This program solves a simple 1D semi-implicit plasma fluid model. The model
+! only contains drift and diffusion for electrons, and static ions.
+!
+! Author: Jannis Teunissen
 program semi_implicit
   implicit none
 
@@ -45,6 +49,7 @@ program semi_implicit
   print *, "dt:        ", dt
   print *, "tau:       ", dt_tau
 
+  ! Determine cell-centered coordinates
   do n = -1, nx+2
      x(n) = (n - 0.5_dp) * dx
   end do
@@ -58,6 +63,7 @@ program semi_implicit
      n_i = 0
   end where
 
+  ! Set initial field
   call solve_field(0.0_dp)
 
   time     = 0.0_dp
@@ -84,6 +90,7 @@ program semi_implicit
 
 contains
 
+  ! Solve for the electric field semi-implicitly
   subroutine solve_field(dt)
     real(dp), intent(in)    :: dt
     real(dp)                :: n_face(nx+1)
@@ -92,6 +99,7 @@ contains
     real(dp)                :: phi_left, phi_right
     integer                 :: i, n
 
+    ! TODO: maybe check that densities are zero at boundaries?
     do n = 1, nx + 1
        ! Determine n_e at cell faces
        n_face(n) = 0.5_dp * (n_e(n-1) + n_e(n))
@@ -99,7 +107,7 @@ contains
        coeff(n) = -eps0 / e - dt * mu * n_face(n)
     end do
 
-    ! TODO: maybe check that densities are zero at boundaries?
+    ! Set matrix diagonals
     l_diag(1:nx) = coeff(1:nx) / dx**2
     ! For the left boundary condition at the cell face
     l_diag(1) = 2 * l_diag(1)
@@ -124,16 +132,19 @@ contains
 
     call solve_tridiag(l_diag, diag, u_diag, rhs, phi, nx)
 
+    ! Compute the electric field from the potential
     field_fc(1) = -(phi(1) - phi_left) / (0.5_dp * dx)
     field_fc(nx+1) = -(phi_right - phi(nx)) / (0.5_dp * dx)
     do i = 2, nx
        field_fc(i) = -(phi(i) - phi(i-1)) / dx
     end do
 
+    ! Take average of face values at cell center
     field_cc = 0.5_dp * (field_fc(2:) + field_fc(1:nx))
 
   end subroutine solve_field
 
+  ! Advance the solution in time
   subroutine advance(dt)
     real(dp), intent(in) :: dt
     real(dp)             :: flux(1:nx+1), Dvec(1:nx+1)
