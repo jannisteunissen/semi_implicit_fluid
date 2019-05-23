@@ -3,28 +3,29 @@ program semi_implicit
 
   integer, parameter :: dp = kind(0.0d0)
 
-  real(dp), parameter :: e = 1.602176634e-19_dp
-  real(dp), parameter :: eps0 = 8.8541878176e-12_dp
+  real(dp), parameter :: e    = 1.602176634e-19_dp  ! elementary charge
+  real(dp), parameter :: eps0 = 8.8541878176e-12_dp ! permittivity of vacuum
 
-  integer, parameter  :: nx        = 300
-  real(dp), parameter :: L         = 10e-3_dp
-  real(dp), parameter :: dx        = L / nx
-  real(dp), parameter :: t_end     = 30e-9_dp
-  real(dp), parameter :: dt_output = 1e-9_dp
-  real(dp), parameter :: mu        = 0.03_dp
-  real(dp), parameter :: D         = 0.1_dp
-  real(dp), parameter :: E0        = 1e6_dp
-  real(dp), parameter :: n0        = 1e20_dp
+  integer, parameter  :: nx        = 300      ! number of grid points
+  real(dp), parameter :: L         = 10e-3_dp ! domain length
+  real(dp), parameter :: dx        = L / nx   ! grid spacing
+  real(dp), parameter :: t_end     = 30e-9_dp ! end time
+  real(dp), parameter :: dt_output = 1e-9_dp  ! output time step
+  real(dp), parameter :: mu        = 0.03_dp  ! electron mobility (m^2/Vs)
+  real(dp), parameter :: D         = 0.1_dp   ! electron diffusion constant (m^2/s)
+  real(dp), parameter :: E0        = 1e6_dp   ! applied electric field
+  real(dp), parameter :: n0        = 1e20_dp  ! initial density
 
-  real(dp) :: dt, dt_cfl, dt_diff, dt_tau, dt_max
-
-  real(dp) :: x(-1:nx+2)
-  real(dp) :: n_e(-1:nx+2)
-  real(dp) :: n_i(-1:nx+2)
-  real(dp) :: field_fc(nx+1)
-  real(dp) :: field_cc(nx)
-  real(dp) :: phi(nx)
-  real(dp) :: time
+  real(dp) :: dt             ! current time step
+  real(dp) :: dt_max         ! maximum time step
+  real(dp) :: x(-1:nx+2)     ! cell-centered coordinate
+  real(dp) :: n_e(-1:nx+2)   ! cell-centered electron density
+  real(dp) :: n_i(-1:nx+2)   ! cell-centered ion density
+  real(dp) :: field_fc(nx+1) ! face-centered electric field
+  real(dp) :: field_cc(nx)   ! cell-centered electric field
+  real(dp) :: phi(nx)        ! cell-centered electric potential
+  real(dp) :: time           ! simulation time
+  real(dp) :: dt_cfl, dt_diff, dt_tau
   integer  :: n, n_output
   logical  :: output_this_step
 
