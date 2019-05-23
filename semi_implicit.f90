@@ -22,11 +22,11 @@ program semi_implicit
   real(dp) :: D         = 0.1_dp   ! electron diffusion constant (m^2/s)
   real(dp) :: E0        = 1e6_dp   ! applied electric field
   real(dp) :: n0        = 1e20_dp  ! initial density
+  real(dp) :: dt_max    = -1.0_dp  ! maximum time step
 
-  real(dp) :: dx             ! grid spacing
-  real(dp) :: dt             ! current time step
-  real(dp) :: dt_max         ! maximum time step
-  real(dp) :: time           ! simulation time
+  real(dp) :: dx   ! grid spacing
+  real(dp) :: dt   ! current time step
+  real(dp) :: time ! simulation time
   real(dp) :: dt_cfl, dt_diff, dt_tau
   integer  :: n, n_output
   logical  :: output_this_step
@@ -45,7 +45,8 @@ program semi_implicit
   call CFG_add_get(cfg, "nx", nx, "Number of grid points")
   call CFG_add_get(cfg, "L", L, "Domain length")
   call CFG_add_get(cfg, "t", t_end, "End time")
-  call CFG_add_get(cfg, "dt", dt_output, "Output time step")
+  call CFG_add_get(cfg, "dt_output", dt_output, "Output time step")
+  call CFG_add_get(cfg, "dt_max", dt_max, "Maximal time step (automatic if < 0)")
   call CFG_add_get(cfg, "mu", mu, "Electron mobility (m^2/Vs)")
   call CFG_add_get(cfg, "D", D, "Electron diffusion constant (m^2/s)")
   call CFG_add_get(cfg, "E0", E0, "Applied electric field")
@@ -59,10 +60,15 @@ program semi_implicit
   allocate(phi(nx))
 
   dx      = L / nx
-  dt_cfl  = 0.5_dp * dx / max(abs(mu * E0), 1e-10_dp)
+  dt_cfl  = dx / max(abs(mu * E0), 1e-10_dp)
   dt_diff = 0.5_dp * dx**2 / max(D, 1e-10_dp)
   dt_tau  = eps0 / (elem_charge * mu * n0)
-  dt_max  = 1/(1/dt_cfl + 1/dt_diff)
+
+  if (dt_max <= 0) then
+     dt_max  = 0.5_dp/(1/dt_cfl + 1/dt_diff)
+  else if (dt_max > 0.5_dp/(1/dt_cfl + 1/dt_diff)) then
+     error stop "Time step too large for CFL/diffusion"
+  end if
 
   print *, "L:         ", L
   print *, "nx:        ", nx
@@ -72,8 +78,10 @@ program semi_implicit
   print *, "mu:        ", mu
   print *, "D:         ", D
   print *, "E0:        ", E0
-  print *, "dt:        ", dt
-  print *, "tau:       ", dt_tau
+  print *, "dt_cfl:    ", dt_cfl
+  print *, "dt_diff:   ", dt_diff
+  print *, "dt_max:    ", dt_max
+  print *, "dt_tau     ", dt_tau
 
   ! Determine cell-centered coordinates
   do n = -1, nx+2
