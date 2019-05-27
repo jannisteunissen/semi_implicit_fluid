@@ -28,7 +28,7 @@ program semi_implicit
   real(dp) :: dt   ! current time step
   real(dp) :: time ! simulation time
   real(dp) :: dt_cfl, dt_diff, dt_tau
-  integer  :: n, n_output
+  integer  :: n, n_output, it
   logical  :: output_this_step
 
   real(dp), allocatable :: x(:)        ! cell-centered coordinate
@@ -105,6 +105,7 @@ program semi_implicit
 
   time     = 0.0_dp
   n_output = 0
+  it       = 0
 
   do while (time <= t_end)
      output_this_step = (time + dt_max >= dt_output * n_output)
@@ -119,11 +120,15 @@ program semi_implicit
      call solve_field(dt)
      call advance(dt)
      time = time + dt
+     it   = it + 1
 
      if (output_this_step) then
         call write_output(n_output, time)
      end if
   end do
+
+  write(*, "(A,E10.4,A,I0,A,E10.4)") "Simulation end, t = ", 1.0d9 * time, &
+       " ns, it = ", it, ", mean(dt) = ", time / it
 
 contains
 
@@ -305,7 +310,6 @@ contains
     write(fname, "(A,I0.6,A)") trim(output_name) // "_", ix, ".txt"
     open(newunit=my_unit, file=trim(fname))
 
-    write(my_unit, "(A)") "x field electron pos_ion potential"
     do n = 1, nx
        write(my_unit, *) x(n), &
             field_cc(n), &
