@@ -310,6 +310,8 @@ contains
     write(fname, "(A,I0.6,A)") trim(output_name) // "_", ix, ".txt"
     open(newunit=my_unit, file=trim(fname))
 
+    write(my_unit, "(A)") "x field electron pos_ion potential"
+
     do n = 1, nx
        write(my_unit, *) x(n), &
             field_cc(n), &
